@@ -119,6 +119,17 @@ return [
             'url'  => 'docente/secciones',
             'icon' => 'fas fa-fw fa-th-list',
         ],
+        ['header' => 'PERFIL ESTUDIANTIL'],
+        [
+            'text' => 'Mis Notas',
+            'url'  => 'estudiante/notas',
+            'icon' => 'fas fa-fw fa-award',
+        ],
+        [
+            'text' => 'Documentos',
+            'url'  => 'estudiante/documentos',
+            'icon' => 'fas fa-fw fa-folder-open',
+        ],
     ],
 
     /*
