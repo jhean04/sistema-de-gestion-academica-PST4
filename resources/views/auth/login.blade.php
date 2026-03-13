@@ -42,9 +42,8 @@
     <div class="mb-3">
         <div class="d-flex align-items-center mb-2">
             <span class="captcha-image">
-                {{-- Usamos la función asset o url para asegurar que la ruta sea completa --}}
-                {!! captcha_img('flat') !!}
-            </span>
+                <img src="{{ url('captcha/flat') }}?{{ rand() }}" alt="captcha">
+            </span>F
             <button type="button" class="btn btn-outline-secondary btn-sm ml-2" id="refresh-captcha">
                 <i class="fas fa-sync-alt"></i>
             </button>
@@ -84,13 +83,8 @@
 <script>
     $(document).ready(function() {
         $('#refresh-captcha').click(function() {
-            $.ajax({
-                type: 'GET',
-                url: '{{ url("captcha/flat") }}' + '?' + Math.random(),
-                success: function(data) {
-                    $(".captcha-image").html(data);
-                }
-            });
+            // Recarga la imagen directamente al src del elemento img
+            $('.captcha-image img').attr('src', '{{ url("captcha/flat") }}?' + Math.random());
         });
     });
 </script>
