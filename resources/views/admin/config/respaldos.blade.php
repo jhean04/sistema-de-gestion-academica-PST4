@@ -9,10 +9,16 @@
 @section('content')
 <div class="container-fluid">
     @if(session('success'))
-        <div class="alert alert-success">{{ session('success') }}</div>
+        <div class="alert alert-success alert-dismissible fade show">
+            <button type="button" class="close" data-dismiss="alert">&times;</button>
+            <i class="fas fa-check"></i> {{ session('success') }}
+        </div>
     @endif
     @if(session('error'))
-        <div class="alert alert-danger">{{ session('error') }}</div>
+        <div class="alert alert-danger alert-dismissible fade show">
+            <button type="button" class="close" data-dismiss="alert">&times;</button>
+            <i class="fas fa-exclamation-triangle"></i> {{ session('error') }}
+        </div>
     @endif
 
     <div class="card card-outline card-warning shadow">
@@ -28,28 +34,47 @@
             </div>
         </div>
         <div class="card-body p-0">
-            <table class="table table-hover">
+            <table class="table table-hover table-striped">
                 <thead>
                     <tr>
                         <th>Archivo</th>
                         <th>Tamaño</th>
                         <th>Fecha</th>
                         <th>Usuario</th>
-                        <th>Acciones</th>
+                        <th class="text-center">Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
                     @forelse($respaldos as $r)
                     <tr>
                         <td>{{ $r->nombre_archivo }}</td>
-                        {{-- Conversión de bytes a Megabytes para que se vea bien --}}
                         <td>{{ number_format($r->tamaño_bytes / 1048576, 2) }} MB</td>
-                        <td>{{ $r->fecha_backup }}</td>
+                        <td>{{ \Carbon\Carbon::parse($r->fecha_backup)->format('d/m/Y h:i A') }}</td>
                         <td>{{ $r->usuario->nombre ?? 'Sistema' }} {{ $r->usuario->apellido ?? '' }}</td>
-                        <td>
-                            <a href="{{ route('respaldos.descargar', $r->id_backup) }}" class="btn btn-primary btn-sm">
-                                <i class="fas fa-download"></i> Descargar
-                            </a>
+                        <td class="text-center">
+                            <div class="btn-group">
+                                {{-- Descargar --}}
+                                <a href="{{ route('respaldos.descargar', $r->id_backup) }}" class="btn btn-info btn-sm" title="Descargar">
+                                    <i class="fas fa-download"></i>
+                                </a>
+
+                                {{-- Restaurar --}}
+                                <form action="{{ route('respaldos.restaurar', $r->id_backup) }}" method="POST" style="display:inline;" onsubmit="return confirm('¡ADVERTENCIA! Se reemplazará toda la base de datos actual con este respaldo. ¿Desea continuar?')">
+                                    @csrf
+                                    <button type="submit" class="btn btn-success btn-sm" title="Restaurar Base de Datos">
+                                        <i class="fas fa-undo"></i> 
+                                    </button>
+                                </form>
+
+                                {{-- Eliminar --}}
+                                <form action="{{ route('respaldos.eliminar', $r->id_backup) }}" method="POST" style="display:inline;" onsubmit="return confirm('¿Está seguro de eliminar este archivo de respaldo de forma permanente?')">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="btn btn-danger btn-sm" title="Eliminar Archivo">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </button>
+                                </form>
+                            </div>
                         </td>
                     </tr>
                     @empty

@@ -7,12 +7,12 @@ use Illuminate\Http\Request;
 use App\Models\Respaldo;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\File;
 
 class RespaldoController extends Controller
 {
     public function index()
     {
-        // Sincronizado con tu columna 'fecha_backup'
         $respaldos = Respaldo::with('usuario')
             ->orderBy('fecha_backup', 'desc') 
             ->get();
@@ -26,8 +26,8 @@ class RespaldoController extends Controller
         $rutaRelativa = "backups/" . $nombreArchivo;
         $rutaCompleta = storage_path("app/public/" . $rutaRelativa);
 
-        if (!file_exists(storage_path("app/public/backups"))) {
-            mkdir(storage_path("app/public/backups"), 0777, true);
+        if (!File::exists(storage_path("app/public/backups"))) {
+            File::makeDirectory(storage_path("app/public/backups"), 0777, true);
         }
 
         $dbHost = env('DB_HOST');
@@ -35,25 +35,18 @@ class RespaldoController extends Controller
         $dbUser = env('DB_USERNAME');
         $dbPass = env('DB_PASSWORD');
 
-        // --- INICIO DE LA MODIFICACIÓN ---
-        // Definimos la ruta exacta donde XAMPP tiene el ejecutable
         $rutaMysql = 'C:\xampp\mysql\bin\mysqldump.exe'; 
-        
-        // Creamos el comando usando la ruta absoluta
         $comando = "{$rutaMysql} --user={$dbUser} --password={$dbPass} --host={$dbHost} {$dbName} > {$rutaCompleta}";
         
-        // Ejecutamos el comando
         exec($comando, $output, $returnVar);
-        // --- FIN DE LA MODIFICACIÓN ---
 
         if ($returnVar === 0) {
             try {
-                // MAGIA: Inserción directa con tus nombres de tabla y columnas
                 Respaldo::create([
                     'nombre_archivo' => $nombreArchivo,
                     'ruta'           => $rutaRelativa,
                     'tamaño_bytes'   => filesize($rutaCompleta),
-                    'realizado_por'  => Auth::id(), // FK vinculada a tu tabla usuario
+                    'realizado_por'  => Auth::id(),
                     'tipo'           => 'COMPLETO',
                     'estado'         => 'EXITOSO',
                     'observaciones'  => 'Respaldo manual exitoso'
@@ -65,19 +58,57 @@ class RespaldoController extends Controller
             }
         }
 
-        return redirect()->back()->with('error', 'Error al ejecutar mysqldump. Verifica que la ruta C:\xampp\mysql\bin\mysqldump.exe sea correcta.');
+        return redirect()->back()->with('error', 'Error al ejecutar mysqldump.');
     }
 
     public function descargar($id)
     {
         $respaldo = Respaldo::findOrFail($id);
-        // Usamos 'ruta' que es el nombre de tu columna en backup_log
         $ruta = storage_path("app/public/" . $respaldo->ruta);
         
         if (file_exists($ruta)) {
             return response()->download($ruta);
         }
+        return redirect()->back()->with('error', 'El archivo físico no existe.');
+    }
 
-        return redirect()->back()->with('error', 'El archivo físico no existe en el servidor.');
+    public function eliminar($id)
+    {
+        $respaldo = Respaldo::findOrFail($id);
+        $ruta = storage_path("app/public/" . $respaldo->ruta);
+
+        if (file_exists($ruta)) {
+            unlink($ruta);
+        }
+
+        $respaldo->delete();
+        return redirect()->back()->with('success', 'Respaldo eliminado correctamente.');
+    }
+
+    public function restaurar($id)
+    {
+        $respaldo = Respaldo::findOrFail($id);
+        $rutaCompleta = storage_path("app/public/" . $respaldo->ruta);
+
+        if (!file_exists($rutaCompleta)) {
+            return redirect()->back()->with('error', 'El archivo de respaldo no existe físicamente.');
+        }
+
+        $dbHost = env('DB_HOST');
+        $dbName = env('DB_DATABASE');
+        $dbUser = env('DB_USERNAME');
+        $dbPass = env('DB_PASSWORD');
+
+        // IMPORTANTE: Ruta al ejecutable mysql.exe para restaurar
+        $rutaMysql = 'C:\xampp\mysql\bin\mysql.exe';
+        $comando = "{$rutaMysql} --user={$dbUser} --password={$dbPass} --host={$dbHost} {$dbName} < {$rutaCompleta}";
+
+        exec($comando, $output, $returnVar);
+
+        if ($returnVar === 0) {
+            return redirect()->back()->with('success', 'Base de datos restaurada con éxito desde el archivo: ' . $respaldo->nombre_archivo);
+        }
+
+        return redirect()->back()->with('error', 'Error al restaurar la base de datos.');
     }
 }

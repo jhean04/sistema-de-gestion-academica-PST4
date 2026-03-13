@@ -43,7 +43,7 @@
         <div class="d-flex align-items-center mb-2">
             <span class="captcha-image">
                 <img src="{{ url('captcha/flat') }}?{{ rand() }}" alt="captcha">
-            </span>F
+            </span>
             <button type="button" class="btn btn-outline-secondary btn-sm ml-2" id="refresh-captcha">
                 <i class="fas fa-sync-alt"></i>
             </button>
