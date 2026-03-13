@@ -7,12 +7,10 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class UserController extends Controller
 {
-    // ... (métodos index, create, store, show, edit, update, etc. se mantienen igual) ...
-    // Asegúrate de mantener tus métodos anteriores intactos.
-
     public function index()
     {
         $usuarios = User::all();
@@ -21,32 +19,65 @@ class UserController extends Controller
 
     public function create()
     {
-        return view('admin.usuarios.create');
+        // Cargamos datos necesarios para el formulario dinámico
+        $representantes = User::where('tipo_usuario', 'REPRESENTANTE')->get();
+        $grados = DB::table('grado_seccion')->get(); // Ajusta el nombre de la tabla si es distinto
+        
+        return view('admin.usuarios.create', compact('representantes', 'grados'));
     }
 
     public function store(Request $request)
     {
-        $request->validate([
+        $rules = [
             'cedula' => 'required|unique:usuario,cedula',
             'nombre' => 'required',
             'apellido' => 'required',
             'email' => 'required|email|unique:usuario,email',
             'password' => 'required|min:6',
             'tipo_usuario' => 'required'
-        ]);
+        ];
 
-        User::create([
-            'cedula' => $request->cedula,
-            'nombre' => $request->nombre,
-            'apellido' => $request->apellido,
-            'email' => $request->email,
-            'password_hash' => Hash::make($request->password),
-            'tipo_usuario' => $request->tipo_usuario,
-            'activo' => 1,
-            'fecha_registro' => now()
-        ]);
+        // Validaciones extra si es estudiante
+        if ($request->tipo_usuario === 'ESTUDIANTE') {
+            $rules['id_representante'] = 'required';
+            $rules['id_grado_sec'] = 'required';
+        }
 
-        return redirect()->route('usuarios.index')->with('success', 'Usuario creado correctamente.');
+        $request->validate($rules);
+
+        // Iniciamos una transacción para asegurar que se creen ambos registros o ninguno
+        DB::beginTransaction();
+
+        try {
+            $user = User::create([
+                'cedula' => $request->cedula,
+                'nombre' => $request->nombre,
+                'apellido' => $request->apellido,
+                'email' => $request->email,
+                'password_hash' => Hash::make($request->password),
+                'tipo_usuario' => $request->tipo_usuario,
+                'activo' => 1,
+                'fecha_registro' => now()
+            ]);
+
+            // Si es estudiante, registramos su inscripción
+            if ($request->tipo_usuario === 'ESTUDIANTE') {
+                DB::table('inscripcion')->insert([
+                    'id_usuario' => $user->id_usuario,
+                    'id_grado_sec' => $request->id_grado_sec,
+                    'id_representante' => $request->id_representante,
+                    'fecha_inscripcion' => now(),
+                    'estado' => 'ACTIVO'
+                ]);
+            }
+
+            DB::commit();
+            return redirect()->route('usuarios.index')->with('success', 'Usuario creado correctamente.');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->withErrors('Error al procesar el registro: ' . $e->getMessage())->withInput();
+        }
     }
 
     public function show($id)
@@ -106,8 +137,6 @@ class UserController extends Controller
         }
     }
 
-    // --- MÉTODOS DE PERFIL DE USUARIO (CORREGIDOS) ---
-
     public function completeProfileView()
     {
         return view('admin.usuarios.complete_profile', ['user' => Auth::user()]);
@@ -115,10 +144,8 @@ class UserController extends Controller
 
     public function storeProfile(Request $request)
     {
-        // 1. Obtener el usuario actual buscando por su ID para asegurar que Eloquent lo rastree
         $user = User::findOrFail(Auth::id());
         
-        // 2. Validación (Asegúrate de que los nombres coincidan con tu HTML)
         $request->validate([
             'telefono' => 'required|min:10',
             'direccion' => 'required|min:5',
@@ -126,7 +153,6 @@ class UserController extends Controller
             'foto_perfil' => 'nullable|image|mimes:jpg,jpeg,png|max:2048'
         ]);
 
-        // 3. Manejo de la foto
         if ($request->hasFile('foto_perfil')) {
             if (!Storage::disk('public')->exists('profiles')) {
                 Storage::disk('public')->makeDirectory('profiles');
@@ -135,12 +161,10 @@ class UserController extends Controller
             $user->foto_perfil = $path;
         }
 
-        // 4. Inyectar datos manualmente para asegurar que save() los detecte
         $user->telefono = $request->telefono;
         $user->direccion = $request->direccion;
         $user->fecha_nacimiento = $request->fecha_nacimiento;
         
-        // 5. Guardar y verificar
         if ($user->save()) {
             return redirect()->route('home')->with('success', '¡Perfil activado correctamente!');
         }
