@@ -18,7 +18,7 @@ return [
     |--------------------------------------------------------------------------
     */
 
-    'logo' => '<b>SIGAL</b>',
+    'logo' => "<b>SIGAL</b>",
     'logo_img' => 'vendor/adminlte/dist/img/liceo1.png',
     'logo_img_alt' => 'SIGAL Logo',
     'logo_img_class' => 'brand-image elevation-3',

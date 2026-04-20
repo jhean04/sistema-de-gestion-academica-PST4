@@ -32,13 +32,11 @@ Route::middleware(['auth', 'profile.complete'])->group(function () {
     Route::get('admin/academico', [AcademicoController::class, 'index'])->name('academico.index');
     Route::get('admin/academico/anio/crear', [AcademicoController::class, 'createAnio'])->name('academico.anio.create');
     Route::post('admin/academico/anio', [AcademicoController::class, 'storeAnio'])->name('academico.anio.store');
-    // Rutas de Edición Año
     Route::get('admin/academico/anio/editar/{id}', [AcademicoController::class, 'editAnio'])->name('academico.anio.edit');
     Route::put('admin/academico/anio/update/{id}', [AcademicoController::class, 'updateAnio'])->name('academico.anio.update');
 
     Route::get('admin/academico/grado/crear', [AcademicoController::class, 'createGrado'])->name('academico.grado.create');
     Route::post('admin/academico/grado', [AcademicoController::class, 'storeGrado'])->name('academico.grado.store');
-    // Rutas de Edición Grado
     Route::get('admin/academico/grado/editar/{id}', [AcademicoController::class, 'editGrado'])->name('academico.grado.edit');
     Route::put('admin/academico/grado/update/{id}', [AcademicoController::class, 'updateGrado'])->name('academico.grado.update');
 
@@ -47,7 +45,7 @@ Route::middleware(['auth', 'profile.complete'])->group(function () {
     Route::get('admin/academico/grado/{id}/plan', [AcademicoController::class, 'planEstudio'])->name('academico.grado.plan');
     Route::post('admin/academico/plan/store', [AcademicoController::class, 'storePlan'])->name('academico.plan.store');
 
-    // MATERIAS, ASIGNACIÓN, INSCRIPCIONES, CALIFICACIONES, REPORTES Y RESPALDOS (Se mantienen igual)
+    // MATERIAS, ASIGNACIÓN, INSCRIPCIONES, CALIFICACIONES, REPORTES Y RESPALDOS
     Route::get('admin/materias', [MateriaController::class, 'index'])->name('materias.index');
     Route::post('admin/materias', [MateriaController::class, 'store'])->name('materias.store');
     Route::delete('admin/materias/{id}', [MateriaController::class, 'destroy'])->name('materias.destroy');
@@ -67,7 +65,6 @@ Route::middleware(['auth', 'profile.complete'])->group(function () {
     Route::delete('admin/config/respaldos/eliminar/{id}', [RespaldoController::class, 'eliminar'])->name('respaldos.eliminar');
     Route::post('admin/config/respaldos/restaurar/{id}', [RespaldoController::class, 'restaurar'])->name('respaldos.restaurar');
 
-    // PERFIL
     Route::get('/perfil', [ProfileController::class, 'edit'])->name('profile.show');
     Route::put('/perfil/update', [ProfileController::class, 'update'])->name('perfil.update');
     Route::put('/perfil/password', [ProfileController::class, 'changePassword'])->name('perfil.password');
@@ -78,12 +75,17 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/completar-perfil', [UserController::class, 'storeProfile'])->name('perfil.guardar');
 });
 
-// DOCENTE Y ESTUDIANTE (Se mantienen igual)
+// MODULO DOCENTE
 Route::get('/docente/secciones', [DocenteController::class, 'index'])->name('docente.secciones');
+
+// --- MODIFICACIÓN AQUÍ: Se cambió "verEstudiantesMasivo" por "verEstudiantes" para que coincida con el controlador ---
 Route::get('/docente/secciones/{id_grado_sec}/{id_materia}/estudiantes', [DocenteController::class, 'verEstudiantes'])->name('docente.estudiantes');
+Route::post('/docente/guardar-notas-masivo', [DocenteController::class, 'guardarNotasMasivo'])->name('docente.guardar_notas_masivo');
+
 Route::get('/docente/evaluar/{id_usuario}/{id_materia}', [DocenteController::class, 'formularioNota'])->name('docente.evaluar');
 Route::post('/docente/guardar-nota', [DocenteController::class, 'guardarNota'])->name('docente.guardar_nota');
 Route::get('/docente/reporte/{id_grado_sec}/{id_materia}', [DocenteController::class, 'reporteSeccion'])->name('docente.reporte');
+
 Route::get('/estudiante/notas', [EstudianteController::class, 'index'])->name('estudiante.notas');
 Route::get('/estudiante/documentos', [EstudianteController::class, 'documentos'])->name('estudiante.documentos');
 Route::get('/estudiante/constancia/estudio', [EstudianteController::class, 'descargarConstancia'])->name('estudiante.constancia');
